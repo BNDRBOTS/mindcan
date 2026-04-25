@@ -810,6 +810,7 @@
 
         <button class="ui-btn" id="btn-save" title="Save Canvas Locally"><span class="icon">↓</span> Save</button>
         <button class="ui-btn" id="btn-export" title="Export Canvas"><span class="icon">⎘</span> Export</button>
+        <button class="ui-btn" id="btn-undo" title="Undo Last Action"><span class="icon">↶</span> Undo</button>
         <button class="ui-btn" id="btn-reset" title="Reset Canvas"><span class="icon">⊘</span> Reset</button>
 
         <div class="dock-divider"></div>
@@ -855,6 +856,9 @@
             camera: { x: 0, y: 0, zoom: 1 },
             cards: new Map(),
             connections: [],
+            undoStack: [],
+            preDragState: null,
+            preEditState: null,
             
             focusedCardId: null,
             editingCardId: null,
@@ -983,7 +987,71 @@ Sequentially map the flow from root concepts through their connections. Synthesi
             }
         }
 
-        /* --- CORE SYSTEM LOGIC --- */
+        /* --- CORE SYSTEM LOGIC (UNDO, SAVE, LOAD) --- */
+        function pushUndoState(specificState = null) {
+            const stateToSave = specificState || serializeCanvas();
+            STATE.undoStack.push(stateToSave);
+            if (STATE.undoStack.length > 50) STATE.undoStack.shift();
+        }
+
+        function execUndo() {
+            if (STATE.undoStack.length === 0) {
+                showToast("Nothing to undo");
+                return;
+            }
+            const prevStateStr = STATE.undoStack.pop();
+            restoreCanvasState(prevStateStr);
+            showToast("Undo Successful");
+        }
+
+        function restoreCanvasState(raw) {
+            try {
+                const data = JSON.parse(raw);
+                
+                STATE.cards.forEach(c => c.el.remove());
+                STATE.connections.forEach(c => { c.pathEl.remove(); if (c.hitEl) c.hitEl.remove(); });
+                STATE.cards.clear();
+                STATE.connections = [];
+                
+                let maxCardId = 0;
+                let maxConnId = 0;
+
+                STATE.camera = data.camera || { ...CFG.defaultCamera };
+                updateCamera();
+
+                const idMap = new Map();
+                data.cards.forEach(cData => {
+                    const parsedId = parseInt(cData.id.replace('c_', '')) || 0;
+                    if (parsedId > maxCardId) maxCardId = parsedId;
+
+                    const c = createCard(cData.x, cData.y, cData.w, cData.h, cData.text, cData.id);
+                    idMap.set(cData.id, c.id);
+                    c.el.classList.remove('theme-obsidian', 'theme-void', 'theme-terracotta', 'theme-aubergine', 'theme-gold');
+                    if (cData.theme) c.el.classList.add(cData.theme);
+                });
+
+                lastCardId = Math.max(lastCardId, maxCardId);
+
+                data.connections.forEach(conn => {
+                    const parsedConnId = parseInt(conn.id.replace('c_', '')) || 0;
+                    if (parsedConnId > maxConnId) maxConnId = parsedConnId;
+
+                    const newSource = idMap.get(conn.sourceId);
+                    const newEnd = idMap.get(conn.endId);
+                    if (newSource && newEnd) {
+                        createConnection(newSource, conn.sourceEdge, newEnd, conn.endEdge, conn.id);
+                    }
+                });
+
+                lastConnId = Math.max(lastConnId, maxConnId);
+
+                return true;
+            } catch (e) {
+                console.error("Restore Failed", e);
+                return false;
+            }
+        }
+
         function saveCanvas() {
             localStorage.setItem('spatial_canvas_save', serializeCanvas());
             showToast("Canvas Saved Locally");
@@ -992,42 +1060,9 @@ Sequentially map the flow from root concepts through their connections. Synthesi
         function loadCanvas() {
             const raw = localStorage.getItem('spatial_canvas_save');
             if (!raw) return false;
-            try {
-                const data = JSON.parse(raw);
-                
-                // Clear existing visually
-                STATE.cards.forEach(c => c.el.remove());
-                STATE.connections.forEach(c => { c.pathEl.remove(); if (c.hitEl) c.hitEl.remove(); });
-                STATE.cards.clear();
-                STATE.connections = [];
-                lastCardId = 0;
-                lastConnId = 0;
-
-                STATE.camera = data.camera || { ...CFG.defaultCamera };
-                updateCamera();
-
-                const idMap = new Map();
-                data.cards.forEach(cData => {
-                    const c = createCard(cData.x, cData.y, cData.w, cData.h, cData.text);
-                    idMap.set(cData.id, c.id);
-                    c.el.classList.remove('theme-obsidian', 'theme-void', 'theme-terracotta', 'theme-aubergine', 'theme-gold');
-                    if (cData.theme) c.el.classList.add(cData.theme);
-                });
-
-                data.connections.forEach(conn => {
-                    const newSource = idMap.get(conn.sourceId);
-                    const newEnd = idMap.get(conn.endId);
-                    if (newSource && newEnd) {
-                        createConnection(newSource, conn.sourceEdge, newEnd, conn.endEdge);
-                    }
-                });
-
-                showToast("Saved Canvas Restored");
-                return true;
-            } catch (e) {
-                console.error(e);
-                return false;
-            }
+            const success = restoreCanvasState(raw);
+            if (success) showToast("Saved Canvas Restored");
+            return success;
         }
 
         function execReset() {
@@ -1065,8 +1100,8 @@ Sequentially map the flow from root concepts through their connections. Synthesi
             }
         }
 
-        function createCard(x, y, w, h, text) {
-            const id = 'c_' + (++lastCardId);
+        function createCard(x, y, w, h, text, forceId = null) {
+            const id = forceId || ('c_' + (++lastCardId));
             const el = document.createElement('div');
             el.className = 'card theme-obsidian'; 
             el.innerHTML = `
@@ -1163,7 +1198,19 @@ Sequentially map the flow from root concepts through their connections. Synthesi
                 n.el.classList.add('is-editing');
                 const content = n.el.querySelector('.card-content');
                 content.setAttribute('contenteditable', 'true');
+                
+                STATE.preEditState = serializeCanvas();
+                
                 content.focus();
+
+                const blurHandler = () => {
+                    if (STATE.preEditState && STATE.preEditState !== serializeCanvas()) {
+                        pushUndoState(STATE.preEditState);
+                    }
+                    STATE.preEditState = null;
+                    content.removeEventListener('blur', blurHandler);
+                };
+                content.addEventListener('blur', blurHandler);
             }
         }
 
@@ -1236,7 +1283,7 @@ Sequentially map the flow from root concepts through their connections. Synthesi
             });
         }
 
-        function createConnection(sId, sEdge, eId, eEdge) {
+        function createConnection(sId, sEdge, eId, eEdge, forceId = null) {
             if (sId === eId) return;
             const existingIdx = STATE.connections.findIndex(c => 
                 (c.sourceId === sId && c.endId === eId) || 
@@ -1244,12 +1291,13 @@ Sequentially map the flow from root concepts through their connections. Synthesi
             );
             
             if (existingIdx !== -1) {
+                pushUndoState();
                 removeConnection(STATE.connections[existingIdx].id);
                 showToast("Connection unlinked");
                 return;
             }
 
-            const id = 'c_' + (++lastConnId);
+            const id = forceId || ('c_' + (++lastConnId));
 
             const pathEl = document.createElementNS("http://www.w3.org/2000/svg", "path");
             pathEl.classList.add('conn-line');
@@ -1265,6 +1313,7 @@ Sequentially map the flow from root concepts through their connections. Synthesi
 
                 const now = Date.now();
                 if (now - lastTap < 300) {
+                    pushUndoState();
                     removeConnection(id);
                     showToast("Connection unlinked");
                 } else {
@@ -1363,6 +1412,7 @@ Sequentially map the flow from root concepts through their connections. Synthesi
             });
             
             document.getElementById('btn-grid').addEventListener('click', e => {
+                pushUndoState();
                 STATE.mode = 'grid';
                 document.getElementById('btn-free').classList.remove('active');
                 const path = e.composedPath();
@@ -1392,6 +1442,7 @@ Sequentially map the flow from root concepts through their connections. Synthesi
             });
 
             document.getElementById('btn-add').addEventListener('click', () => {
+                pushUndoState();
                 const center = screenToWorld(window.innerWidth/2, window.innerHeight/2);
                 let x = center.x - 100;
                 let y = center.y - 50;
@@ -1416,14 +1467,23 @@ Sequentially map the flow from root concepts through their connections. Synthesi
                 );
             });
 
+            document.getElementById('btn-undo').addEventListener('click', execUndo);
+
             document.getElementById('btn-reset').addEventListener('click', () => {
                 openModal(
                     "Confirm RESET CANVAS?",
                     "This will clear all current cards and connections from memory.",
                     [
                         { text: "Cancel", class: "ui-btn", onClick: closeModal },
-                        { text: "Save & Reset", class: "ui-btn btn-terracotta", onClick: () => { saveCanvas(); execReset(); } },
-                        { text: "Reset (No Save)", class: "ui-btn", onClick: execReset }
+                        { text: "Save & Reset", class: "ui-btn btn-terracotta", onClick: () => { 
+                            saveCanvas(); 
+                            pushUndoState();
+                            execReset(); 
+                        } },
+                        { text: "Reset (No Save)", class: "ui-btn", onClick: () => {
+                            pushUndoState();
+                            execReset();
+                        }}
                     ]
                 );
             });
@@ -1502,6 +1562,86 @@ Sequentially map the flow from root concepts through their connections. Synthesi
                     dockHandle.releasePointerCapture(e.pointerId);
                 }
             });
+            
+            // --- SYNTHESIS LOGIC ---
+            document.getElementById('btn-syn').addEventListener('click', async () => {
+                const btn = document.getElementById('btn-syn');
+                let contentText = Array.from(STATE.cards.values())
+                                    .map(n => n.text.replace(/<[^>]+>/g, ' ')) 
+                                    .join('\n---\n')
+                                    .trim();
+
+                if (!contentText) {
+                    showToast("Add text to your cards to begin.");
+                    return;
+                }
+
+                btn.innerHTML = '<span class="icon">❖</span> Processing...';
+                btn.style.opacity = '0.7';
+                btn.style.pointerEvents = 'none';
+                
+                try {
+                    const apiKey = ""; 
+                    
+                    if (!apiKey) {
+                        showToast("Provide your DeepSeek API key in the code to continue.");
+                        throw new Error("Missing Key");
+                    }
+
+                    const response = await fetch('https://api.deepseek.com/chat/completions', {
+                        method: 'POST',
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${apiKey}`
+                        },
+                        body: JSON.stringify({
+                            model: "deepseek-chat",
+                            messages: [
+                                { 
+                                    role: "user", 
+                                    content: `Instruction: You are a spatial canvas logic engine. Return a brief, punchy synthesis of the notes without conversational padding.\n\nNotes:\n${contentText}` 
+                                }
+                            ]
+                        })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.error) {
+                        throw new Error(data.error.message || "API Error");
+                    }
+
+                    const summary = data.choices?.[0]?.message?.content || "Synthesis requires another attempt.";
+
+                    const center = screenToWorld(window.innerWidth/2, window.innerHeight/2);
+                    const existingIds = Array.from(STATE.cards.keys());
+
+                    setTimeout(() => {
+                        pushUndoState();
+                        const aiCard = createCard(center.x - 140, center.y - 80, 280, 'auto', `<strong>Synthesis</strong><br><br>${summary.replace(/\n/g, '<br>')}`);
+                        aiCard.el.classList.add('theme-aubergine'); 
+                        
+                        aiCard.h = aiCard.el.offsetHeight;
+                        renderCard(aiCard);
+                        setFocus(aiCard.id);
+                        resolveOverlap(aiCard);
+                        
+                        existingIds.forEach(id => {
+                            createConnection(id, 'right', aiCard.id, 'left');
+                        });
+
+                        showToast("Pipeline Synthesis Finished");
+                    }, 50);
+
+                } catch (err) {
+                    console.error(err);
+                    showToast("Check network connection to run synthesis.");
+                } finally {
+                    btn.innerHTML = '<span class="icon">❖</span> Synthesis';
+                    btn.style.opacity = '1';
+                    btn.style.pointerEvents = 'auto';
+                }
+            });
         }
 
         function bindCardEvents(n) {
@@ -1509,6 +1649,7 @@ Sequentially map the flow from root concepts through their connections. Synthesi
             swatches.forEach(swatch => {
                 swatch.addEventListener('pointerdown', e => {
                     e.stopPropagation(); 
+                    pushUndoState();
                     n.el.classList.remove('theme-obsidian', 'theme-void', 'theme-terracotta', 'theme-aubergine', 'theme-gold');
                     n.el.classList.add(swatch.dataset.theme);
                     updateAllConnections(); 
@@ -1523,6 +1664,7 @@ Sequentially map the flow from root concepts through their connections. Synthesi
                 if (STATE.editingCardId !== n.id) {
                     e.preventDefault(); 
                     setFocus(n.id);
+                    STATE.preDragState = serializeCanvas();
                     STATE.draggingCard = n;
                     STATE.dragStart = { x: e.clientX, y: e.clientY, cardX: n.x, cardY: n.y };
                     ENV.body.classList.add('is-dragging');
@@ -1543,6 +1685,7 @@ Sequentially map the flow from root concepts through their connections. Synthesi
                 e.stopPropagation();
                 e.preventDefault();
                 setFocus(n.id);
+                STATE.preDragState = serializeCanvas();
                 STATE.resizingCard = n;
                 STATE.resizeStart = { x: e.clientX, y: e.clientY, w: n.w, h: n.h };
                 ENV.body.classList.add('is-resizing');
@@ -1552,7 +1695,18 @@ Sequentially map the flow from root concepts through their connections. Synthesi
             const delHandle = n.el.querySelector('.handle-delete');
             delHandle.addEventListener('pointerdown', e => {
                 e.stopPropagation();
-                deleteCard(n.id);
+                openModal(
+                    "Confirm Delete",
+                    "Are you sure you want to permanently delete this card? Connected links will also be removed.",
+                    [
+                        { text: "Cancel", class: "ui-btn", onClick: closeModal },
+                        { text: "Delete", class: "ui-btn btn-terracotta", onClick: () => {
+                            pushUndoState();
+                            deleteCard(n.id);
+                            closeModal();
+                        }}
+                    ]
+                );
             });
 
             const connHandles = n.el.querySelectorAll('.handle-connect');
@@ -1693,11 +1847,21 @@ Sequentially map the flow from root concepts through their connections. Synthesi
                     STATE.draggingCard.el.style.cursor = 'grab';
                     STATE.draggingCard = null;
                     ENV.body.classList.remove('is-dragging');
+                    
+                    if (STATE.preDragState && STATE.preDragState !== serializeCanvas()) {
+                        pushUndoState(STATE.preDragState);
+                    }
+                    STATE.preDragState = null;
                 }
                 
                 if (STATE.resizingCard) {
                     STATE.resizingCard = null;
                     ENV.body.classList.remove('is-resizing');
+
+                    if (STATE.preDragState && STATE.preDragState !== serializeCanvas()) {
+                        pushUndoState(STATE.preDragState);
+                    }
+                    STATE.preDragState = null;
                 }
 
                 if (STATE.isConnecting) {
@@ -1721,6 +1885,7 @@ Sequentially map the flow from root concepts through their connections. Synthesi
                     });
 
                     if (closestCard) {
+                        pushUndoState();
                         createConnection(STATE.connStart.cardId, STATE.connStart.edge, closestCard.id, closestEdge);
                     }
 
@@ -1737,12 +1902,10 @@ Sequentially map the flow from root concepts through their connections. Synthesi
                     
                     let html = element.innerHTML;
                     
-                    // Auto-Markdown formatting sequence
                     if (/\*\*(.+?)\*\*/.test(html) || /\*(.+?)\*/.test(html)) {
                         const sel = window.getSelection();
                         let caretOffset = 0;
                         
-                        // Snapshot current cursor position
                         if (sel.rangeCount > 0) {
                             const range = sel.getRangeAt(0);
                             const preCaretRange = range.cloneRange();
@@ -1753,14 +1916,12 @@ Sequentially map the flow from root concepts through their connections. Synthesi
 
                         let originalTextLength = element.textContent.length;
 
-                        // Non-greedy conversion
                         html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
                         html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
 
                         if (element.innerHTML !== html) {
                             element.innerHTML = html;
                             
-                            // Dynamically adjust cursor offset based on removed asterisks
                             let newTextLength = element.textContent.length;
                             let diff = originalTextLength - newTextLength;
                             caretOffset -= diff;
@@ -1772,7 +1933,6 @@ Sequentially map the flow from root concepts through their connections. Synthesi
                             range.collapse(true);
                             let nodeStack = [element], node, foundStart = false;
 
-                            // Walk the tree to remap cursor natively within the new DOM nodes
                             while (!foundStart && (node = nodeStack.pop())) {
                                 if (node.nodeType === 3) {
                                     const nextCharIndex = charIndex + node.length;
