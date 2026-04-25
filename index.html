@@ -706,6 +706,9 @@
             overflow-y: auto;
         }
 
+        .card-content strong { font-weight: 800; color: var(--text-primary); }
+        .card-content em { font-style: italic; }
+
         /* ==========================================================================
            MOBILE THUMB ZONE EXPANSION & RESPONSIVE TWEAKS
            ========================================================================== */
@@ -1731,6 +1734,69 @@ Sequentially map the flow from root concepts through their connections. Synthesi
                 if (element.classList.contains('card-content')) {
                     const cardEl = element.closest('.card');
                     const n = Array.from(STATE.cards.values()).find(nd => nd.el === cardEl);
+                    
+                    let html = element.innerHTML;
+                    
+                    // Auto-Markdown formatting sequence
+                    if (/\*\*(.+?)\*\*/.test(html) || /\*(.+?)\*/.test(html)) {
+                        const sel = window.getSelection();
+                        let caretOffset = 0;
+                        
+                        // Snapshot current cursor position
+                        if (sel.rangeCount > 0) {
+                            const range = sel.getRangeAt(0);
+                            const preCaretRange = range.cloneRange();
+                            preCaretRange.selectNodeContents(element);
+                            preCaretRange.setEnd(range.endContainer, range.endOffset);
+                            caretOffset = preCaretRange.toString().length;
+                        }
+
+                        let originalTextLength = element.textContent.length;
+
+                        // Non-greedy conversion
+                        html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+                        html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+
+                        if (element.innerHTML !== html) {
+                            element.innerHTML = html;
+                            
+                            // Dynamically adjust cursor offset based on removed asterisks
+                            let newTextLength = element.textContent.length;
+                            let diff = originalTextLength - newTextLength;
+                            caretOffset -= diff;
+                            if (caretOffset < 0) caretOffset = 0;
+
+                            let charIndex = 0;
+                            let range = document.createRange();
+                            range.setStart(element, 0);
+                            range.collapse(true);
+                            let nodeStack = [element], node, foundStart = false;
+
+                            // Walk the tree to remap cursor natively within the new DOM nodes
+                            while (!foundStart && (node = nodeStack.pop())) {
+                                if (node.nodeType === 3) {
+                                    const nextCharIndex = charIndex + node.length;
+                                    if (caretOffset >= charIndex && caretOffset <= nextCharIndex) {
+                                        range.setStart(node, caretOffset - charIndex);
+                                        range.collapse(true);
+                                        foundStart = true;
+                                    }
+                                    charIndex = nextCharIndex;
+                                } else {
+                                    let i = node.childNodes.length;
+                                    while (i--) nodeStack.push(node.childNodes[i]);
+                                }
+                            }
+                            
+                            if (!foundStart && element.childNodes.length > 0) {
+                                range.selectNodeContents(element);
+                                range.collapse(false);
+                            }
+
+                            sel.removeAllRanges();
+                            sel.addRange(range);
+                        }
+                    }
                     if (n) n.text = element.innerHTML;
                 }
             });
