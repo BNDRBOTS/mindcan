@@ -212,6 +212,25 @@
             box-shadow: 0 24px 50px rgba(0,0,0,0.2);
         }
 
+        /* Vertical Rotator Logic */
+        #ui-dock.is-vertical {
+            flex-direction: column;
+            overflow-x: hidden;
+            overflow-y: auto;
+            max-height: calc(100dvh - 32px);
+            max-width: max-content;
+        }
+        
+        #ui-dock.is-vertical .dock-divider {
+            width: 20px;
+            height: 1px;
+            margin: 4px 0;
+        }
+        
+        #ui-dock.is-vertical .dock-drag-handle svg {
+            transform: rotate(90deg);
+        }
+
         .dock-drag-handle {
             width: 32px;
             height: 36px;
@@ -699,17 +718,17 @@
                 width: 44px; height: 44px;
             }
             .color-swatch::after {
-            content: '';
-            position: fixed;
-            top: 50%; left: 50%;
-            width: 32px; height: 32px;
-            transform: translate(-50%, -50%);
+                content: '';
+                position: fixed;
+                top: 50%; left: 50%;
+                width: 32px; height: 32px;
+                transform: translate(-50%, -50%);
+            }
+            .dock-drag-handle {
+                width: 44px;
+                height: 44px;
+            }
         }
-        .dock-drag-handle {
-            width: 44px;
-            height: 44px;
-        }
-    }
     </style>
 </head>
 <body>
@@ -728,6 +747,8 @@
             </svg>
         </div>
         
+        <button class="ui-btn icon-only" id="btn-rotate" title="Rotate UI"><span class="icon">↻</span></button>
+
         <div class="dock-divider"></div>
 
         <button class="ui-btn icon-only" id="btn-recenter" title="Recenter Canvas"><span class="icon">⌖</span></button>
@@ -1253,68 +1274,100 @@
             });
 
             document.getElementById('btn-add').addEventListener('click', () => {
-            const center = screenToWorld(window.innerWidth/2, window.innerHeight/2);
-            let x = center.x - 100;
-            let y = center.y - 50;
-            if (STATE.mode === 'grid') { x = snapToGrid(x); y = snapToGrid(y); }
-            const n = createCard(x, y, 200, 100, "<strong>New Card</strong><br>Start typing...");
-            n.el.classList.add('theme-terracotta');
-            setFocus(n.id);
-        });
+                const center = screenToWorld(window.innerWidth/2, window.innerHeight/2);
+                let x = center.x - 100;
+                let y = center.y - 50;
+                if (STATE.mode === 'grid') { x = snapToGrid(x); y = snapToGrid(y); }
+                const n = createCard(x, y, 200, 100, "<strong>New Card</strong><br>Start typing...");
+                n.el.classList.add('theme-terracotta');
+                setFocus(n.id);
+            });
 
-        document.getElementById('btn-syn').addEventListener('click', runSynthesis);
+            document.getElementById('btn-syn').addEventListener('click', runSynthesis);
 
-        // --- DOCK DRAG LOGIC ---
-        const dock = document.getElementById('ui-dock');
-        const dockHandle = dock.querySelector('.dock-drag-handle');
-        let isDraggingDock = false;
-        let dockStart = { x: 0, y: 0, left: 0, top: 0 };
+            // --- UI ROTATOR LOGIC ---
+            document.getElementById('btn-rotate').addEventListener('click', () => {
+                const dock = document.getElementById('ui-dock');
+                
+                // If it's in its initial absolute bottom position, lock its physical pixels before rotating 
+                // so it transforms locally rather than snapping arbitrarily
+                if (!dock.style.top && !dock.style.left) {
+                    const preRect = dock.getBoundingClientRect();
+                    dock.style.bottom = 'auto';
+                    dock.style.transform = 'none';
+                    dock.style.left = `${preRect.left}px`;
+                    dock.style.top = `${preRect.top}px`;
+                }
 
-        dockHandle.addEventListener('pointerdown', e => {
-            e.preventDefault();
-            e.stopPropagation();
-            isDraggingDock = true;
-            
-            const rect = dock.getBoundingClientRect();
-            dock.style.bottom = 'auto';
-            dock.style.transform = 'none';
-            dock.style.left = `${rect.left}px`;
-            dock.style.top = `${rect.top}px`;
-            
-            dockStart = { x: e.clientX, y: e.clientY, left: rect.left, top: rect.top };
-            dock.classList.add('is-dragging');
-            dockHandle.setPointerCapture(e.pointerId);
-        });
+                dock.classList.toggle('is-vertical');
+                
+                // Validate bounds after the shape repaints to prevent clipping
+                requestAnimationFrame(() => {
+                    const rect = dock.getBoundingClientRect();
+                    let newLeft = parseFloat(dock.style.left || 0);
+                    let newTop = parseFloat(dock.style.top || 0);
+                    
+                    newLeft = Math.max(8, Math.min(window.innerWidth - rect.width - 8, newLeft));
+                    newTop = Math.max(8, Math.min(window.innerHeight - rect.height - 8, newTop));
+                    
+                    dock.style.left = `${newLeft}px`;
+                    dock.style.top = `${newTop}px`;
+                });
+                
+                showToast("UI Rotated");
+            });
 
-        dockHandle.addEventListener('pointermove', e => {
-            if (!isDraggingDock) return;
-            e.preventDefault();
-            
-            const dx = e.clientX - dockStart.x;
-            const dy = e.clientY - dockStart.y;
-            
-            const rect = dock.getBoundingClientRect();
-            let newLeft = dockStart.left + dx;
-            let newTop = dockStart.top + dy;
-            
-            newLeft = Math.max(8, Math.min(window.innerWidth - rect.width - 8, newLeft));
-            newTop = Math.max(8, Math.min(window.innerHeight - rect.height - 8, newTop));
-            
-            dock.style.left = `${newLeft}px`;
-            dock.style.top = `${newTop}px`;
-        });
+            // --- DOCK DRAG LOGIC ---
+            const dock = document.getElementById('ui-dock');
+            const dockHandle = dock.querySelector('.dock-drag-handle');
+            let isDraggingDock = false;
+            let dockStart = { x: 0, y: 0, left: 0, top: 0 };
 
-        dockHandle.addEventListener('pointerup', e => {
-            if (isDraggingDock) {
-                isDraggingDock = false;
-                dock.classList.remove('is-dragging');
-                dockHandle.releasePointerCapture(e.pointerId);
-            }
-        });
-    }
+            dockHandle.addEventListener('pointerdown', e => {
+                e.preventDefault();
+                e.stopPropagation();
+                isDraggingDock = true;
+                
+                const rect = dock.getBoundingClientRect();
+                dock.style.bottom = 'auto';
+                dock.style.transform = 'none';
+                dock.style.left = `${rect.left}px`;
+                dock.style.top = `${rect.top}px`;
+                
+                dockStart = { x: e.clientX, y: e.clientY, left: rect.left, top: rect.top };
+                dock.classList.add('is-dragging');
+                dockHandle.setPointerCapture(e.pointerId);
+            });
 
-    function bindCardEvents(n) {
-        const swatches = n.el.querySelectorAll('.color-swatch');
+            dockHandle.addEventListener('pointermove', e => {
+                if (!isDraggingDock) return;
+                e.preventDefault();
+                
+                const dx = e.clientX - dockStart.x;
+                const dy = e.clientY - dockStart.y;
+                
+                const rect = dock.getBoundingClientRect();
+                let newLeft = dockStart.left + dx;
+                let newTop = dockStart.top + dy;
+                
+                newLeft = Math.max(8, Math.min(window.innerWidth - rect.width - 8, newLeft));
+                newTop = Math.max(8, Math.min(window.innerHeight - rect.height - 8, newTop));
+                
+                dock.style.left = `${newLeft}px`;
+                dock.style.top = `${newTop}px`;
+            });
+
+            dockHandle.addEventListener('pointerup', e => {
+                if (isDraggingDock) {
+                    isDraggingDock = false;
+                    dock.classList.remove('is-dragging');
+                    dockHandle.releasePointerCapture(e.pointerId);
+                }
+            });
+        }
+
+        function bindCardEvents(n) {
+            const swatches = n.el.querySelectorAll('.color-swatch');
             swatches.forEach(swatch => {
                 swatch.addEventListener('pointerdown', e => {
                     e.stopPropagation(); 
