@@ -209,8 +209,9 @@
             padding: 14px 20px 12px;
             border-bottom: 1px solid var(--border-subtle);
             flex-shrink: 0;
-            gap: 12px;
+            gap: 8px;
             flex-wrap: wrap;
+            min-width: 0;
         }
 
         .sp-title {
@@ -218,12 +219,22 @@
             font-weight: 800;
             color: var(--text-primary);
             letter-spacing: -0.01em;
+            flex-shrink: 0;
         }
 
         .sp-actions {
             display: flex;
             gap: 6px;
             flex-wrap: wrap;
+            flex-shrink: 0;
+            align-items: center;
+        }
+
+        /* On very narrow screens, stack sp-actions buttons tightly */
+        @media (max-width: 400px) {
+            .sp-header { padding: 12px 14px 10px; gap: 6px; }
+            .sp-actions { gap: 4px; }
+            #sp-export-pdf span:not(.icon), #sp-add-canvas span:not(.icon) { display: none; }
         }
 
         .sp-content {
@@ -256,9 +267,16 @@
             text-transform: uppercase;
             letter-spacing: 0.06em;
         }
+        .sp-content h4 {
+            font-size: 14px; font-weight: 700;
+            color: var(--text-primary);
+            margin: 16px 0 5px;
+        }
         .sp-content p { margin: 10px 0; }
         .sp-content ul, .sp-content ol { padding-left: 22px; margin: 10px 0; }
         .sp-content li { margin: 5px 0; }
+        .sp-content ol { list-style-type: decimal; }
+        .sp-content ul { list-style-type: disc; }
         .sp-content strong { color: var(--text-primary); font-weight: 700; }
         .sp-content em { font-style: italic; }
         .sp-content code {
@@ -275,11 +293,35 @@
             color: var(--text-secondary);
             font-style: italic;
         }
+        .sp-content hr {
+            border: none;
+            border-top: 1px solid var(--border-subtle);
+            margin: 20px 0;
+        }
+        .sp-content table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 12px 0;
+            font-size: 13px;
+        }
+        .sp-content th {
+            font-weight: 700;
+            color: var(--text-primary);
+            text-align: left;
+            padding: 7px 10px;
+            border: 1px solid var(--border-subtle);
+            background: rgba(128,128,128,0.05);
+        }
+        .sp-content td {
+            padding: 6px 10px;
+            border: 1px solid var(--border-subtle);
+            vertical-align: top;
+        }
 
         /* ===================== DOCK ===================== */
         #ui-dock {
             position: fixed;
-            bottom: env(safe-area-inset-bottom, var(--space-3));
+            bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
             left: 50%;
             transform: translateX(-50%);
             background: var(--bg-glass);
@@ -288,43 +330,81 @@
             border: 1px solid var(--border-subtle);
             border-top: 1px solid rgba(255, 255, 255, 0.4);
             border-radius: 14px; 
-            padding: 8px;
+            padding: 6px;
             display: flex;
             align-items: center;
-            gap: 6px;
+            gap: 4px;
             box-shadow: 
                 inset 0 -2px 6px rgba(0,0,0,0.02),
                 var(--shadow-dock);
             z-index: 10000;
             pointer-events: auto;
-            max-width: calc(100dvw - 32px);
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-            scrollbar-width: none;
+            /* NO overflow — dock compresses instead of scrolling */
+            max-width: calc(100dvw - 24px);
+            transition: bottom 0.3s ease;
         }
 
-        #ui-dock::-webkit-scrollbar { display: none; }
-
         html[data-theme="dark"] #ui-dock { border-top: 1px solid rgba(255, 255, 255, 0.08); }
-
         #ui-dock.is-dragging { box-shadow: 0 24px 50px rgba(0,0,0,0.2); }
 
+        /* Vertical mode — manual rotate or auto below 420px */
         #ui-dock.is-vertical {
             flex-direction: column;
             overflow-x: hidden;
             overflow-y: auto;
             max-height: calc(100dvh - 32px);
             max-width: max-content;
+            bottom: auto;
+            /* position preserved by JS when dragged */
         }
-        
-        #ui-dock.is-vertical .dock-divider {
-            width: 20px;
-            height: 1px;
-            margin: 4px 0;
+        #ui-dock.is-vertical .dock-divider { width: 20px; height: 1px; margin: 2px 0; }
+        #ui-dock.is-vertical .dock-drag-handle svg { transform: rotate(90deg); }
+
+        /* ---- DOCK COMPRESSION TIERS ---- */
+
+        /* Tier 1 — ≤760px: shrink buttons, tighten gaps */
+        @media (max-width: 760px) {
+            #ui-dock { gap: 3px; padding: 5px; }
+            .ui-btn { height: 32px; padding: 0 10px; font-size: 12px; gap: 4px; }
+            .ui-btn.icon-only { padding: 0 8px; }
+            .font-stepper { height: 32px; }
+            .font-stepper .ui-btn { height: 28px; padding: 0 8px; }
+            .dock-drag-handle { width: 28px; height: 32px; }
+            .dock-divider { height: 16px; margin: 0 2px; }
         }
-        
-        #ui-dock.is-vertical .dock-drag-handle svg {
-            transform: rotate(90deg);
+
+        /* Tier 2 — ≤600px: hide text on utility buttons, keep primary labels */
+        @media (max-width: 600px) {
+            #btn-free span:not(.icon), #btn-grid span:not(.icon),
+            #btn-theme span:not(.icon), #btn-save span:not(.icon),
+            #btn-export span:not(.icon), #btn-undo span:not(.icon),
+            #btn-reset span:not(.icon), #btn-legend span:not(.icon) { display: none; }
+            .ui-btn { padding: 0 9px; }
+            #ui-dock { gap: 2px; }
+        }
+
+        /* Tier 3 — ≤460px: hide ALL text labels, icon-only mode */
+        @media (max-width: 460px) {
+            #btn-add span:not(.icon), #btn-syn span:not(.icon) { display: none; }
+            .ui-btn { height: 30px; padding: 0 8px; font-size: 11px; }
+            .font-stepper { height: 30px; }
+            .font-stepper .ui-btn { height: 26px; }
+            /* Hide less critical dividers */
+            .dock-divider:nth-child(n+8) { display: none; }
+        }
+
+        /* Tier 4 — ≤360px: auto-vertical via JS class, but CSS fallback too */
+        @media (max-width: 360px) {
+            #ui-dock:not(.is-dragged) {
+                flex-direction: column;
+                max-width: max-content;
+                max-height: calc(100dvh - 80px);
+                overflow-y: auto;
+                left: 12px;
+                transform: none;
+                bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+            }
+            #ui-dock:not(.is-dragged) .dock-divider { width: 20px; height: 1px; margin: 2px 0; }
         }
 
         .dock-drag-handle {
@@ -340,19 +420,14 @@
             transition: background 0.2s, color 0.2s;
             touch-action: none;
         }
-
-        .dock-drag-handle:hover {
-            background: rgba(128, 128, 128, 0.1);
-            color: var(--text-primary);
-        }
-
+        .dock-drag-handle:hover { background: rgba(128, 128, 128, 0.1); color: var(--text-primary); }
         .dock-drag-handle:active { cursor: grabbing; }
 
         .dock-divider {
             width: 1px;
             height: 20px;
             background: var(--border-subtle);
-            margin: 0 4px;
+            margin: 0 2px;
             flex-shrink: 0;
         }
 
@@ -375,20 +450,13 @@
             white-space: nowrap;
             flex-shrink: 0;
         }
-
         .ui-btn .icon { font-size: 14px; font-weight: 800; }
-
-        .ui-btn:hover {
-            background: rgba(128, 128, 128, 0.1);
-            color: var(--text-primary);
-        }
-
+        .ui-btn:hover { background: rgba(128, 128, 128, 0.1); color: var(--text-primary); }
         .ui-btn.active {
             background: var(--text-primary);
             color: var(--bg-canvas);
             box-shadow: 0 2px 8px rgba(0,0,0,0.15);
         }
-
         .ui-btn.icon-only { padding: 0 10px; }
 
         .font-stepper {
@@ -401,18 +469,8 @@
             box-shadow: inset 0 1px 3px rgba(0,0,0,0.04);
             flex-shrink: 0;
         }
-        
-        .font-stepper .ui-btn {
-            background: transparent;
-            height: 32px;
-            padding: 0 10px;
-            box-shadow: none;
-        }
-        .font-stepper .ui-btn:hover {
-            background: var(--bg-canvas);
-            color: var(--text-primary);
-            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
-        }
+        .font-stepper .ui-btn { background: transparent; height: 32px; padding: 0 10px; box-shadow: none; }
+        .font-stepper .ui-btn:hover { background: var(--bg-canvas); color: var(--text-primary); box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
 
         .btn-terracotta {
             background: linear-gradient(180deg, #E26E54, var(--terracotta));
@@ -553,7 +611,7 @@
             background: linear-gradient(180deg, var(--card-bg-top), var(--card-bg-bottom));
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
-            border: 1px solid var(--border-subtle);
+            border: 1.5px solid var(--active-border);
             border-radius: 48px; 
             padding: 24px 36px; 
             min-width: 160px;
@@ -605,7 +663,9 @@
         }
 
         body:not(.is-dragging):not(.is-connecting) .card:hover .card-controls,
-        body:not(.is-dragging):not(.is-connecting) .card.is-focused .card-controls {
+        body:not(.is-dragging):not(.is-connecting) .card.is-focused .card-controls,
+        /* Keep controls visible after color swatch is picked */
+        body:not(.is-connecting) .card.color-flash .card-controls {
             opacity: 1;
             pointer-events: auto;
         }
@@ -749,19 +809,10 @@
         .card-content strong { font-weight: 800; color: var(--text-primary); }
         .card-content em { font-style: italic; }
 
-        /* ===================== MOBILE ===================== */
+        /* ===================== MOBILE / TOUCH ===================== */
         @media (pointer: coarse) {
-            .ui-btn {
-                height: 44px;
-                min-height: 44px;
-            }
-            .font-stepper {
-                height: 44px;
-            }
-            .font-stepper .ui-btn {
-                height: 40px;
-                min-height: 40px;
-            }
+            .ui-btn { min-height: 40px; }
+            .font-stepper .ui-btn { min-height: 36px; }
             .handle-connect::after {
                 content: '';
                 position: fixed;
@@ -783,34 +834,84 @@
                 right: -10px; bottom: -10px;
                 width: 44px; height: 44px;
             }
+            .color-swatch {
+                width: 24px;
+                height: 24px;
+            }
             .color-swatch::after {
                 content: '';
                 position: fixed;
                 top: 50%; left: 50%;
-                width: 32px; height: 32px;
+                width: 36px; height: 36px;
                 transform: translate(-50%, -50%);
             }
-            .dock-drag-handle {
-                width: 44px;
-                height: 44px;
-            }
-            .sp-header {
-                padding: 12px 16px 10px;
-            }
+            .dock-drag-handle { width: 40px; height: 40px; }
+            .sp-header { padding: 12px 16px 10px; }
             .sp-content {
-                padding: 20px 20px;
+                padding: 20px;
                 padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 40px);
             }
         }
 
-        /* On very small screens, hide label text from utility buttons to save dock space */
-        @media (max-width: 480px) {
-            #btn-free .icon ~ *, #btn-grid .icon ~ *,
-            #btn-theme .icon ~ *, #btn-save .icon ~ *,
-            #btn-export .icon ~ *, #btn-undo .icon ~ *,
-            #btn-reset .icon ~ * {
-                display: none;
-            }
+        /* ===================== LEGEND MODAL ===================== */
+        #legend-modal {
+            position: fixed; top: 0; left: 0; width: 100dvw; height: 100dvh;
+            background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+            z-index: 20500; display: flex; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s;
+        }
+        #legend-modal.is-active { opacity: 1; pointer-events: auto; }
+        #legend-modal .modal-box { transform: translateY(20px); transition: transform 0.3s; max-width: 380px; }
+        #legend-modal.is-active .modal-box { transform: translateY(0); }
+
+        .legend-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .legend-swatch {
+            width: 20px; height: 20px;
+            border-radius: 5px;
+            flex-shrink: 0;
+            border: 1px solid rgba(0,0,0,0.15);
+            box-shadow: inset 0 1px 2px rgba(255,255,255,0.2);
+        }
+
+        .legend-input {
+            flex: 1;
+            height: 34px;
+            border-radius: 8px;
+            border: 1px solid var(--border-subtle);
+            background: var(--bg-canvas);
+            color: var(--text-primary);
+            font-family: var(--font-ui);
+            font-size: 13px;
+            font-weight: 600;
+            padding: 0 12px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .legend-input:focus { border-color: var(--terracotta); }
+
+        .legend-note {
+            font-size: 11px;
+            color: var(--text-secondary);
+            font-style: italic;
+            text-align: center;
+            margin-top: -4px;
+        }
+
+        @media (pointer: coarse) {
+            .legend-input { height: 44px; font-size: 16px; } /* 16px prevents iOS Safari auto-zoom */
+            .legend-swatch { width: 24px; height: 24px; }
+        }
+
+        /* Legend modal: scroll on short screens */
+        #legend-modal .modal-box {
+            max-height: calc(100dvh - 48px);
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
         }
     </style>
 </head>
@@ -823,6 +924,41 @@
             <div class="modal-title" id="modal-title"></div>
             <div class="modal-body" id="modal-body"></div>
             <div class="modal-actions" id="modal-actions"></div>
+        </div>
+    </div>
+
+    <!-- LEGEND MODAL -->
+    <div id="legend-modal">
+        <div class="modal-box">
+            <div class="modal-title">◈ Color Legend</div>
+            <div class="modal-body" style="margin-bottom:-4px">Name each color. Labels inject into Synthesis prompts.</div>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+                <div class="legend-row">
+                    <div class="legend-swatch" style="background:var(--obsidian)"></div>
+                    <input class="legend-input" id="leg-obsidian" type="text" maxlength="40" placeholder="e.g. Core Idea">
+                </div>
+                <div class="legend-row">
+                    <div class="legend-swatch" style="background:var(--void)"></div>
+                    <input class="legend-input" id="leg-void" type="text" maxlength="40" placeholder="e.g. Supporting Point">
+                </div>
+                <div class="legend-row">
+                    <div class="legend-swatch" style="background:var(--terracotta)"></div>
+                    <input class="legend-input" id="leg-terracotta" type="text" maxlength="40" placeholder="e.g. Action Item">
+                </div>
+                <div class="legend-row">
+                    <div class="legend-swatch" style="background:var(--aubergine)"></div>
+                    <input class="legend-input" id="leg-aubergine" type="text" maxlength="40" placeholder="e.g. Synthesis">
+                </div>
+                <div class="legend-row">
+                    <div class="legend-swatch" style="background:var(--gold)"></div>
+                    <input class="legend-input" id="leg-gold" type="text" maxlength="40" placeholder="e.g. Blocked / Risk">
+                </div>
+            </div>
+            <p class="legend-note">Saved to this device. Blank labels are omitted from AI prompts.</p>
+            <div class="modal-actions">
+                <button class="ui-btn" id="leg-cancel">Cancel</button>
+                <button class="ui-btn btn-aubergine" id="leg-save">Save Legend</button>
+            </div>
         </div>
     </div>
 
@@ -886,6 +1022,10 @@
         <button class="ui-btn" id="btn-export" title="Export Canvas"><span class="icon">⎘</span> Export</button>
         <button class="ui-btn" id="btn-undo" title="Undo Last Action"><span class="icon">↶</span> Undo</button>
         <button class="ui-btn" id="btn-reset" title="Reset Canvas"><span class="icon">⊘</span> Reset</button>
+
+        <div class="dock-divider"></div>
+
+        <button class="ui-btn" id="btn-legend" title="Edit Color Legend"><span class="icon">◈</span> Legend</button>
     </div>
 
     <div id="viewport">
@@ -948,22 +1088,70 @@
         let _synthMarkdown = '';
         let _synthCapturedIds = [];
 
+        /* ---- LEGEND STATE ---- */
+        let LEGEND = {
+            obsidian: '',
+            void: '',
+            terracotta: '',
+            aubergine: '',
+            gold: ''
+        };
+
+        function loadLegend() {
+            const raw = localStorage.getItem('spatial_canvas_legend');
+            if (raw) {
+                try { Object.assign(LEGEND, JSON.parse(raw)); } catch(e) {}
+            }
+        }
+
+        function saveLegend() {
+            localStorage.setItem('spatial_canvas_legend', JSON.stringify(LEGEND));
+        }
+
         /* ---- MARKDOWN RENDERER ---- */
         function renderMarkdown(text) {
             if (typeof marked !== 'undefined' && marked.parse) {
+                marked.use({
+                    breaks: true,
+                    gfm: true,
+                    mangle: false,
+                    headerIds: false
+                });
                 return marked.parse(text);
             }
-            // Inline fallback
-            return text
-                .replace(/^### (.+)$/gm, '<h3>$1</h3>')
-                .replace(/^## (.+)$/gm, '<h2>$1</h2>')
-                .replace(/^# (.+)$/gm, '<h1>$1</h1>')
-                .replace(/\*\*(.+?)\*\*/gs, '<strong>$1</strong>')
-                .replace(/\*(.+?)\*/gs, '<em>$1</em>')
-                .replace(/`(.+?)`/g, '<code>$1</code>')
-                .replace(/^- (.+)$/gm, '<li>$1</li>')
-                .replace(/(<li>[\s\S]+?<\/li>)/g, '<ul>$1</ul>')
-                .split('\n\n').map(p => p.startsWith('<') ? p : `<p>${p}</p>`).join('');
+            // Inline fallback — block-level first, then inline (no gs flag to prevent cross-tag matches)
+            let html = text;
+            // Headings (h4 → h1, most specific first)
+            html = html.replace(/^#### (.+)$/gm, '<h4>$1</h4>');
+            html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+            html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+            html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+            // Horizontal rule
+            html = html.replace(/^(?:---|\*\*\*|___)\s*$/gm, '<hr>');
+            // Blockquote
+            html = html.replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>');
+            // Ordered list items → wrap consecutive runs in <ol>
+            html = html.replace(/(?:(?:^|\n)\d+\. .+)+/g, match => {
+                const items = match.trim().replace(/^\d+\. (.+)$/gm, '<li>$1</li>');
+                return '<ol>' + items + '</ol>';
+            });
+            // Unordered list items → wrap consecutive runs in <ul>
+            html = html.replace(/(?:(?:^|\n)[-*] .+)+/g, match => {
+                const items = match.trim().replace(/^[-*] (.+)$/gm, '<li>$1</li>');
+                return '<ul>' + items + '</ul>';
+            });
+            // Inline — use [^*<>] to never cross tags or asterisks
+            html = html.replace(/\*\*([^*<>\n]+?)\*\*/g, '<strong>$1</strong>');
+            html = html.replace(/\*([^*<>\n]+?)\*/g, '<em>$1</em>');
+            html = html.replace(/`([^`\n]+?)`/g, '<code>$1</code>');
+            // Paragraphs: wrap double-newline-separated non-block content
+            html = html.split(/\n{2,}/).map(p => {
+                p = p.trim();
+                if (!p) return '';
+                if (/^<[h1-6houbl]/.test(p)) return p;
+                return `<p>${p}</p>`;
+            }).join('');
+            return html;
         }
 
         /* ---- SYNTHESIS PANEL ---- */
@@ -977,6 +1165,46 @@
         function closeSynthesisPanel() {
             document.getElementById('synthesis-panel').classList.remove('is-open');
         }
+
+        /* Swipe-down-to-dismiss on synthesis panel */
+        (function initSynthesisSwipe() {
+            const panel = document.getElementById('synthesis-panel');
+            let touchStartY = 0;
+            let touchStartScrollTop = 0;
+            let isSwiping = false;
+
+            panel.addEventListener('touchstart', e => {
+                touchStartY = e.touches[0].clientY;
+                const content = document.getElementById('sp-content');
+                touchStartScrollTop = content ? content.scrollTop : 0;
+                isSwiping = false;
+            }, { passive: true });
+
+            panel.addEventListener('touchmove', e => {
+                const dy = e.touches[0].clientY - touchStartY;
+                const content = document.getElementById('sp-content');
+                const atTop = !content || content.scrollTop <= 0;
+                if (dy > 10 && atTop) {
+                    isSwiping = true;
+                    // Provide visual resistance
+                    const clamped = Math.min(dy * 0.4, 120);
+                    panel.style.transform = `translateY(${clamped}px)`;
+                    panel.style.transition = 'none';
+                }
+            }, { passive: true });
+
+            panel.addEventListener('touchend', e => {
+                panel.style.transition = '';
+                panel.style.transform = '';
+                if (isSwiping) {
+                    const dy = e.changedTouches[0].clientY - touchStartY;
+                    if (dy > 80) {
+                        closeSynthesisPanel();
+                    }
+                }
+                isSwiping = false;
+            }, { passive: true });
+        })();
 
         function addSynthesisToCanvas() {
             const summary = _synthMarkdown;
@@ -1010,102 +1238,43 @@
             const renderedHTML = document.getElementById('sp-content').innerHTML;
             const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
-            const printWin = window.open('', '_blank', 'width=860,height=1100');
-            if (!printWin) {
-                showToast("Allow pop-ups to export PDF");
+            const htmlContent = '<!DOCTYPE html>\n<html>\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n<title>Synthesis Report<\/title>\n<style>\n*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }\nbody {\n    font-family: Georgia, \'Times New Roman\', serif;\n    max-width: 720px;\n    margin: 56px auto;\n    padding: 0 40px;\n    color: #161311;\n    line-height: 1.75;\n    font-size: 15px;\n}\n.doc-title {\n    font-family: system-ui, -apple-system, sans-serif;\n    font-size: 34px;\n    font-weight: 800;\n    letter-spacing: -0.02em;\n    border-bottom: 3px solid #161311;\n    padding-bottom: 16px;\n    margin-bottom: 10px;\n}\n.doc-meta {\n    font-family: system-ui, sans-serif;\n    font-size: 12px;\n    color: #595450;\n    letter-spacing: 0.05em;\n    text-transform: uppercase;\n    margin-bottom: 48px;\n}\nh1 { font-family: system-ui, sans-serif; font-size: 24px; font-weight: 800; margin: 40px 0 12px; line-height: 1.2; color: #161311; }\nh2 { font-family: system-ui, sans-serif; font-size: 18px; font-weight: 700; margin: 32px 0 10px; color: #161311; }\nh3 { font-family: system-ui, sans-serif; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #595450; margin: 24px 0 8px; }\nh4 { font-family: system-ui, sans-serif; font-size: 15px; font-weight: 700; color: #161311; margin: 20px 0 6px; }\np { margin: 12px 0; }\nul, ol { padding-left: 26px; margin: 12px 0; }\nli { margin: 6px 0; }\nol { list-style-type: decimal; }\nul { list-style-type: disc; }\nstrong { font-weight: 700; color: #161311; }\nem { font-style: italic; }\ncode { font-family: \'Courier New\', monospace; font-size: 13px; background: #f0ece7; border-radius: 3px; padding: 2px 6px; }\nblockquote { border-left: 3px solid #D95A40; margin: 16px 0; padding: 8px 20px; color: #595450; font-style: italic; }\nhr { border: none; border-top: 1px solid #d0ccc7; margin: 28px 0; }\ntable { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }\nth { background: #f0ece7; font-family: system-ui, sans-serif; font-weight: 700; text-align: left; padding: 8px 12px; border: 1px solid #d0ccc7; }\ntd { padding: 7px 12px; border: 1px solid #d0ccc7; vertical-align: top; }\ntr:nth-child(even) td { background: #f8f6f3; }\n@media print {\n    body { margin: 0; padding: 32px 48px; }\n    @page { margin: 0.75in; size: letter; }\n    h1, h2, h3, h4 { page-break-after: avoid; }\n    table, blockquote, pre { page-break-inside: avoid; }\n    ul, ol { page-break-inside: avoid; }\n    .doc-title, .doc-meta { page-break-after: avoid; }\n}\n<\/style>\n<\/head>\n<body>\n<div class="doc-title">Synthesis Report<\/div>\n<div class="doc-meta">MindCan \u00a0\u00b7\u00a0 ' + dateStr + '<\/div>\n' + renderedHTML + '\n<script>\nwindow.addEventListener(\'load\', function() {\n    setTimeout(function() { window.print(); }, 500);\n});\n<\/script>\n<\/body>\n<\/html>';
+
+            // Mobile: window.open('','_blank') + doc.write is blocked on iOS/Android.
+            // Use blob URL opened via anchor click — survives popup blockers on mobile.
+            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ||
+                             (navigator.maxTouchPoints > 1 && window.innerWidth < 1024);
+
+            function openViaBlob() {
+                try {
+                    const blob = new Blob([htmlContent], { type: 'text/html' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.target = '_blank';
+                    a.rel = 'noopener noreferrer';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    setTimeout(() => URL.revokeObjectURL(url), 10000);
+                    showToast(isMobile ? "Tap Share → Print → Save as PDF" : "Opened in new tab — use Print to save PDF");
+                } catch (err) {
+                    showToast("Use Export TXT as an alternative");
+                }
+            }
+
+            if (isMobile) {
+                openViaBlob();
                 return;
             }
 
-            printWin.document.write(`<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>Synthesis Report</title>
-<style>
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-body {
-    font-family: Georgia, 'Times New Roman', serif;
-    max-width: 720px;
-    margin: 56px auto;
-    padding: 0 40px;
-    color: #161311;
-    line-height: 1.75;
-    font-size: 15px;
-}
-.doc-title {
-    font-family: system-ui, -apple-system, sans-serif;
-    font-size: 34px;
-    font-weight: 800;
-    letter-spacing: -0.02em;
-    border-bottom: 3px solid #161311;
-    padding-bottom: 16px;
-    margin-bottom: 10px;
-}
-.doc-meta {
-    font-family: system-ui, sans-serif;
-    font-size: 12px;
-    color: #595450;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    margin-bottom: 48px;
-}
-h1 {
-    font-family: system-ui, sans-serif;
-    font-size: 24px; font-weight: 800;
-    margin: 40px 0 12px;
-    line-height: 1.2;
-    color: #161311;
-}
-h2 {
-    font-family: system-ui, sans-serif;
-    font-size: 18px; font-weight: 700;
-    margin: 32px 0 10px;
-    color: #161311;
-}
-h3 {
-    font-family: system-ui, sans-serif;
-    font-size: 13px; font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: #595450;
-    margin: 24px 0 8px;
-}
-p { margin: 12px 0; }
-ul, ol { padding-left: 26px; margin: 12px 0; }
-li { margin: 6px 0; }
-strong { font-weight: 700; color: #161311; }
-em { font-style: italic; }
-code {
-    font-family: 'Courier New', monospace;
-    font-size: 13px;
-    background: #f0ece7;
-    border-radius: 3px;
-    padding: 2px 6px;
-}
-blockquote {
-    border-left: 3px solid #D95A40;
-    margin: 16px 0;
-    padding: 8px 20px;
-    color: #595450;
-    font-style: italic;
-}
-@media print {
-    body { margin: 0; padding: 32px 48px; }
-    @page { margin: 0.75in; size: letter; }
-}
-</style>
-</head>
-<body>
-<div class="doc-title">Synthesis Report</div>
-<div class="doc-meta">MindCan &nbsp;·&nbsp; ${dateStr}</div>
-${renderedHTML}
-<script>
-window.addEventListener('load', function() {
-    setTimeout(function() { window.print(); }, 500);
-});
-<\/script>
-</body>
-</html>`);
+            const printWin = window.open('', '_blank', 'width=860,height=1100');
+            if (!printWin) {
+                openViaBlob();
+                return;
+            }
+
+            printWin.document.write(htmlContent);
             printWin.document.close();
         }
 
@@ -1144,6 +1313,20 @@ window.addEventListener('load', function() {
             ENV.modalLayer.classList.remove('is-active');
         }
 
+        /* ---- LEGEND MODAL ---- */
+        function openLegendModal() {
+            document.getElementById('leg-obsidian').value  = LEGEND.obsidian;
+            document.getElementById('leg-void').value      = LEGEND.void;
+            document.getElementById('leg-terracotta').value = LEGEND.terracotta;
+            document.getElementById('leg-aubergine').value = LEGEND.aubergine;
+            document.getElementById('leg-gold').value      = LEGEND.gold;
+            document.getElementById('legend-modal').classList.add('is-active');
+        }
+
+        function closeLegendModal() {
+            document.getElementById('legend-modal').classList.remove('is-active');
+        }
+
         /* ---- SERIALIZATION ---- */
         function serializeCanvas() {
             return JSON.stringify({
@@ -1160,9 +1343,23 @@ window.addEventListener('load', function() {
 
         function generateTXT() {
             let txt = "SPATIAL CANVAS EXPORT\n======================\n\n";
+
+            // Legend block — only include rows with user-defined labels
+            const colorNames = { obsidian: 'Obsidian', void: 'Void', terracotta: 'Terracotta', aubergine: 'Aubergine', gold: 'Gold' };
+            const legendLines = Object.entries(colorNames)
+                .filter(([key]) => LEGEND[key] && LEGEND[key].trim())
+                .map(([key, colorName]) => `  ${colorName} = ${LEGEND[key].trim()}`);
+            if (legendLines.length > 0) {
+                txt += "COLOR LEGEND\n----------------------\n";
+                txt += legendLines.join('\n') + '\n\n';
+            }
+
             STATE.cards.forEach(c => {
                 const cleanText = c.text.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]+>/g, '');
-                txt += `[CARD: ${c.id}]\n${cleanText}\n\n`;
+                const themeClass = Array.from(c.el.classList).find(cls => cls.startsWith('theme-')) || 'theme-obsidian';
+                const colorKey = themeClass.replace('theme-', '');
+                const colorLabel = LEGEND[colorKey] ? ` [${LEGEND[colorKey].trim()}]` : '';
+                txt += `[CARD: ${c.id} | Color: ${colorKey}${colorLabel}]\n${cleanText}\n\n`;
             });
             txt += "CONNECTIONS\n======================\n";
             STATE.connections.forEach(c => {
@@ -1298,6 +1495,7 @@ Sequentially map the flow from root concepts through their connections. Synthesi
 
         /* ---- SETUP ---- */
         function setup() {
+            loadLegend();
             bindGlobalEvents();
             bindUI();
             CFG.defaultCamera = { 
@@ -1313,6 +1511,33 @@ Sequentially map the flow from root concepts through their connections. Synthesi
                 n2.el.classList.add('theme-terracotta');
                 updateCamera();
             }
+
+            // Auto-vertical dock on narrow viewports
+            const dock = document.getElementById('ui-dock');
+            let autoVertical = false;
+
+            function checkDockLayout() {
+                if (dock.classList.contains('is-dragged')) return;
+                const narrow = window.innerWidth <= 420;
+                if (narrow && !autoVertical) {
+                    autoVertical = true;
+                    dock.classList.add('is-vertical');
+                    dock.style.left = '12px';
+                    dock.style.bottom = 'calc(env(safe-area-inset-bottom, 0px) + 12px)';
+                    dock.style.transform = 'none';
+                    dock.style.top = 'auto';
+                } else if (!narrow && autoVertical) {
+                    autoVertical = false;
+                    dock.classList.remove('is-vertical');
+                    dock.style.left = '50%';
+                    dock.style.transform = 'translateX(-50%)';
+                    dock.style.bottom = 'calc(env(safe-area-inset-bottom, 0px) + 16px)';
+                    dock.style.top = 'auto';
+                }
+            }
+
+            window.addEventListener('resize', checkDockLayout);
+            checkDockLayout();
         }
 
         /* ---- CARD FACTORY ---- */
@@ -1706,6 +1931,7 @@ Sequentially map the flow from root concepts through their connections. Synthesi
                 dock.style.top = `${rect.top}px`;
                 dockStart = { x: e.clientX, y: e.clientY, left: rect.left, top: rect.top };
                 dock.classList.add('is-dragging');
+                dock.classList.add('is-dragged'); // marks as manually positioned
                 dockHandle.setPointerCapture(e.pointerId);
             });
 
@@ -1802,6 +2028,27 @@ Sequentially map the flow from root concepts through their connections. Synthesi
             document.getElementById('sp-close').addEventListener('click', closeSynthesisPanel);
             document.getElementById('sp-add-canvas').addEventListener('click', addSynthesisToCanvas);
             document.getElementById('sp-export-pdf').addEventListener('click', exportSynthesisPDF);
+
+            /* ---- LEGEND BUTTON + MODAL ---- */
+            document.getElementById('btn-legend').addEventListener('click', openLegendModal);
+
+            document.getElementById('leg-cancel').addEventListener('click', closeLegendModal);
+
+            document.getElementById('leg-save').addEventListener('click', () => {
+                LEGEND.obsidian   = document.getElementById('leg-obsidian').value.trim();
+                LEGEND.void       = document.getElementById('leg-void').value.trim();
+                LEGEND.terracotta = document.getElementById('leg-terracotta').value.trim();
+                LEGEND.aubergine  = document.getElementById('leg-aubergine').value.trim();
+                LEGEND.gold       = document.getElementById('leg-gold').value.trim();
+                saveLegend();
+                closeLegendModal();
+                showToast("Legend Saved");
+            });
+
+            // Close legend modal on backdrop tap
+            document.getElementById('legend-modal').addEventListener('pointerdown', e => {
+                if (e.target === document.getElementById('legend-modal')) closeLegendModal();
+            });
         }
 
         /* ---- CARD EVENTS ---- */
@@ -1813,7 +2060,11 @@ Sequentially map the flow from root concepts through their connections. Synthesi
                     pushUndoState();
                     n.el.classList.remove('theme-obsidian', 'theme-void', 'theme-terracotta', 'theme-aubergine', 'theme-gold');
                     n.el.classList.add(swatch.dataset.theme);
-                    updateAllConnections(); 
+                    updateAllConnections();
+                    // Keep controls visible after pick
+                    n.el.classList.add('color-flash');
+                    clearTimeout(n._colorFlashTimer);
+                    n._colorFlashTimer = setTimeout(() => n.el.classList.remove('color-flash'), 1500);
                 });
             });
 
@@ -1837,6 +2088,16 @@ Sequentially map the flow from root concepts through their connections. Synthesi
                 if (element && (element.closest('.handle') || element.closest('.color-picker'))) return;
                 enterEditMode(n.id);
             });
+
+            // Clicking in card padding while editing focuses the text area
+            n.el.addEventListener('pointerdown', e => {
+                if (STATE.editingCardId !== n.id) return;
+                const hit = e.composedPath().find(el => el instanceof Element && el.classList && el.classList.contains('card-content'));
+                if (!hit) {
+                    e.preventDefault();
+                    n.el.querySelector('.card-content').focus();
+                }
+            }, { capture: true });
 
             const resizeHandle = n.el.querySelector('.handle-resize');
             resizeHandle.addEventListener('pointerdown', e => {
@@ -2018,12 +2279,15 @@ Sequentially map the flow from root concepts through their connections. Synthesi
             });
             
             ENV.cardsLayer.addEventListener('input', e => {
-                const element = e.composedPath().find(el => el instanceof Element);
-                if (element && element.classList.contains('card-content')) {
+                const rawEl = e.composedPath().find(el => el instanceof Element);
+                const element = rawEl && rawEl.closest('.card-content');
+                if (element) {
                     const cardEl = element.closest('.card');
                     const n = Array.from(STATE.cards.values()).find(nd => nd.el === cardEl);
                     let html = element.innerHTML;
-                    if (/\*\*(.+?)\*\*/.test(html) || /\*(.+?)\*/.test(html)) {
+                    // Single-* regex uses lookbehind/lookahead so it never fires on ** mid-type
+                    const MD_SINGLE = /(?<!\*)\*(?!\*)([^*]+?)(?<!\*)\*(?!\*)/;
+                    if (/\*\*(.+?)\*\*/.test(html) || MD_SINGLE.test(html) || /~~.+?~~/.test(html) || /__[^_]+?__/.test(html)) {
                         const sel = window.getSelection();
                         let caretOffset = 0;
                         if (sel.rangeCount > 0) {
@@ -2035,7 +2299,9 @@ Sequentially map the flow from root concepts through their connections. Synthesi
                         }
                         let originalTextLength = element.textContent.length;
                         html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-                        html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+                        html = html.replace(/(?<!\*)\*(?!\*)([^*]+?)(?<!\*)\*(?!\*)/g, '<em>$1</em>');
+                        html = html.replace(/~~(.+?)~~/g, '<del>$1</del>');
+                        html = html.replace(/__([^_]+?)__/g, '<u>$1</u>');
                         if (element.innerHTML !== html) {
                             element.innerHTML = html;
                             let newTextLength = element.textContent.length;
