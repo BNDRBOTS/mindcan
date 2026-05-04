@@ -2,7 +2,8 @@
 <html lang="en" data-theme="light">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <!-- width=device-width added: fixes layout calc bugs on Android Chrome -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Bleeding Edge Blade | Spatial Canvas (SaaS Pro Edition)</title>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -230,7 +231,7 @@
             align-items: center;
         }
 
-        /* On very narrow screens, stack sp-actions buttons tightly */
+        /* On very narrow screens, collapse sp-actions button text to icons only */
         @media (max-width: 400px) {
             .sp-header { padding: 12px 14px 10px; gap: 6px; }
             .sp-actions { gap: 4px; }
@@ -339,10 +340,16 @@
                 var(--shadow-dock);
             z-index: 10000;
             pointer-events: auto;
-            /* NO overflow — dock compresses instead of scrolling */
+            /* Scroll horizontally on narrow screens — never clip buttons */
             max-width: calc(100dvw - 24px);
+            overflow-x: auto;
+            overflow-y: hidden;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none; /* Firefox */
             transition: bottom 0.3s ease;
         }
+        /* Chrome/Safari — hide scrollbar visually but keep scroll behaviour */
+        #ui-dock::-webkit-scrollbar { display: none; }
 
         html[data-theme="dark"] #ui-dock { border-top: 1px solid rgba(255, 255, 255, 0.08); }
         #ui-dock.is-dragging { box-shadow: 0 24px 50px rgba(0,0,0,0.2); }
@@ -355,7 +362,6 @@
             max-height: calc(100dvh - 32px);
             max-width: max-content;
             bottom: auto;
-            /* position preserved by JS when dragged */
         }
         #ui-dock.is-vertical .dock-divider { width: 20px; height: 1px; margin: 2px 0; }
         #ui-dock.is-vertical .dock-drag-handle svg { transform: rotate(90deg); }
@@ -389,17 +395,17 @@
             .ui-btn { height: 30px; padding: 0 8px; font-size: 11px; }
             .font-stepper { height: 30px; }
             .font-stepper .ui-btn { height: 26px; }
-            /* Hide less critical dividers */
             .dock-divider:nth-child(n+8) { display: none; }
         }
 
-        /* Tier 4 — ≤360px: auto-vertical via JS class, but CSS fallback too */
+        /* Tier 4 — ≤360px: auto-vertical via JS class, CSS fallback */
         @media (max-width: 360px) {
             #ui-dock:not(.is-dragged) {
                 flex-direction: column;
+                overflow-x: hidden;
+                overflow-y: auto;
                 max-width: max-content;
                 max-height: calc(100dvh - 80px);
-                overflow-y: auto;
                 left: 12px;
                 transform: none;
                 bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
@@ -664,7 +670,6 @@
 
         body:not(.is-dragging):not(.is-connecting) .card:hover .card-controls,
         body:not(.is-dragging):not(.is-connecting) .card.is-focused .card-controls,
-        /* Keep controls visible after color swatch is picked */
         body:not(.is-connecting) .card.color-flash .card-controls {
             opacity: 1;
             pointer-events: auto;
@@ -808,6 +813,8 @@
 
         .card-content strong { font-weight: 800; color: var(--text-primary); }
         .card-content em { font-style: italic; }
+        .card-content del { text-decoration: line-through; opacity: 0.7; }
+        .card-content u { text-decoration: underline; }
 
         /* ===================== MOBILE / TOUCH ===================== */
         @media (pointer: coarse) {
@@ -851,6 +858,8 @@
                 padding: 20px;
                 padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 40px);
             }
+            /* iOS Safari: font-size ≥16px on all inputs prevents viewport auto-zoom on focus */
+            input, textarea, select { font-size: 16px !important; }
         }
 
         /* ===================== LEGEND MODAL ===================== */
@@ -858,10 +867,20 @@
             position: fixed; top: 0; left: 0; width: 100dvw; height: 100dvh;
             background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
             z-index: 20500; display: flex; align-items: center; justify-content: center;
+            /* Safe-area padding so modal never hides behind notch/home-bar */
+            padding: max(16px, env(safe-area-inset-top, 16px)) 16px max(16px, env(safe-area-inset-bottom, 16px));
             opacity: 0; pointer-events: none; transition: opacity 0.3s;
         }
         #legend-modal.is-active { opacity: 1; pointer-events: auto; }
-        #legend-modal .modal-box { transform: translateY(20px); transition: transform 0.3s; max-width: 380px; }
+        #legend-modal .modal-box {
+            transform: translateY(20px);
+            transition: transform 0.3s;
+            max-width: 380px;
+            /* Scroll on short screens — never overflow viewport */
+            max-height: 100%;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+        }
         #legend-modal.is-active .modal-box { transform: translateY(0); }
 
         .legend-row {
@@ -903,15 +922,9 @@
         }
 
         @media (pointer: coarse) {
-            .legend-input { height: 44px; font-size: 16px; } /* 16px prevents iOS Safari auto-zoom */
+            /* 16px: prevents iOS Safari auto-zoom; height increase for touch comfort */
+            .legend-input { height: 44px; font-size: 16px; }
             .legend-swatch { width: 24px; height: 24px; }
-        }
-
-        /* Legend modal: scroll on short screens */
-        #legend-modal .modal-box {
-            max-height: calc(100dvh - 48px);
-            overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
         }
     </style>
 </head>
@@ -992,7 +1005,6 @@
 
         <div class="dock-divider"></div>
 
-        <!-- PRIMARY ACTIONS FIRST — visible on mobile without scrolling -->
         <button class="ui-btn btn-terracotta" id="btn-add"><span class="icon">+</span> New Card</button>
         <button class="ui-btn btn-aubergine" id="btn-syn"><span class="icon">❖</span> Synthesis</button>
 
@@ -1108,43 +1120,47 @@
             localStorage.setItem('spatial_canvas_legend', JSON.stringify(LEGEND));
         }
 
-        /* ---- MARKDOWN RENDERER ---- */
+        /* ---- MARKDOWN RENDERER ----
+         * Tries marked.js first (gfm + breaks). Falls back to a full inline
+         * renderer that handles h1-h4, bold, italic, strikethrough, underline,
+         * code, blockquote, ordered/unordered lists, hr, and paragraphs.
+         */
         function renderMarkdown(text) {
             if (typeof marked !== 'undefined' && marked.parse) {
-                marked.use({
-                    breaks: true,
-                    gfm: true,
-                    mangle: false,
-                    headerIds: false
-                });
-                return marked.parse(text);
+                try {
+                    marked.use({
+                        breaks: true,
+                        gfm: true,
+                        mangle: false,
+                        headerIds: false
+                    });
+                    return marked.parse(text);
+                } catch (e) {
+                    // Fall through to manual renderer below
+                }
             }
-            // Inline fallback — block-level first, then inline (no gs flag to prevent cross-tag matches)
+
+            // Full inline fallback — block-level first, then inline
             let html = text;
-            // Headings (h4 → h1, most specific first)
             html = html.replace(/^#### (.+)$/gm, '<h4>$1</h4>');
-            html = html.replace(/^### (.+)$/gm, '<h3>$1</h3>');
-            html = html.replace(/^## (.+)$/gm, '<h2>$1</h2>');
-            html = html.replace(/^# (.+)$/gm, '<h1>$1</h1>');
-            // Horizontal rule
+            html = html.replace(/^### (.+)$/gm,  '<h3>$1</h3>');
+            html = html.replace(/^## (.+)$/gm,   '<h2>$1</h2>');
+            html = html.replace(/^# (.+)$/gm,    '<h1>$1</h1>');
             html = html.replace(/^(?:---|\*\*\*|___)\s*$/gm, '<hr>');
-            // Blockquote
             html = html.replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>');
-            // Ordered list items → wrap consecutive runs in <ol>
             html = html.replace(/(?:(?:^|\n)\d+\. .+)+/g, match => {
                 const items = match.trim().replace(/^\d+\. (.+)$/gm, '<li>$1</li>');
                 return '<ol>' + items + '</ol>';
             });
-            // Unordered list items → wrap consecutive runs in <ul>
             html = html.replace(/(?:(?:^|\n)[-*] .+)+/g, match => {
                 const items = match.trim().replace(/^[-*] (.+)$/gm, '<li>$1</li>');
                 return '<ul>' + items + '</ul>';
             });
-            // Inline — use [^*<>] to never cross tags or asterisks
             html = html.replace(/\*\*([^*<>\n]+?)\*\*/g, '<strong>$1</strong>');
-            html = html.replace(/\*([^*<>\n]+?)\*/g, '<em>$1</em>');
+            html = html.replace(/(?<!\*)\*(?!\*)([^*<>\n]+?)(?<!\*)\*(?!\*)/g, '<em>$1</em>');
+            html = html.replace(/~~([^~\n]+?)~~/g, '<del>$1</del>');
+            html = html.replace(/__([^_\n]+?)__/g, '<u>$1</u>');
             html = html.replace(/`([^`\n]+?)`/g, '<code>$1</code>');
-            // Paragraphs: wrap double-newline-separated non-block content
             html = html.split(/\n{2,}/).map(p => {
                 p = p.trim();
                 if (!p) return '';
@@ -1166,17 +1182,14 @@
             document.getElementById('synthesis-panel').classList.remove('is-open');
         }
 
-        /* Swipe-down-to-dismiss on synthesis panel */
+        /* Swipe-down-to-dismiss — only fires when content is scrolled to top */
         (function initSynthesisSwipe() {
             const panel = document.getElementById('synthesis-panel');
             let touchStartY = 0;
-            let touchStartScrollTop = 0;
             let isSwiping = false;
 
             panel.addEventListener('touchstart', e => {
                 touchStartY = e.touches[0].clientY;
-                const content = document.getElementById('sp-content');
-                touchStartScrollTop = content ? content.scrollTop : 0;
                 isSwiping = false;
             }, { passive: true });
 
@@ -1186,7 +1199,6 @@
                 const atTop = !content || content.scrollTop <= 0;
                 if (dy > 10 && atTop) {
                     isSwiping = true;
-                    // Provide visual resistance
                     const clamped = Math.min(dy * 0.4, 120);
                     panel.style.transform = `translateY(${clamped}px)`;
                     panel.style.transition = 'none';
@@ -1198,9 +1210,7 @@
                 panel.style.transform = '';
                 if (isSwiping) {
                     const dy = e.changedTouches[0].clientY - touchStartY;
-                    if (dy > 80) {
-                        closeSynthesisPanel();
-                    }
+                    if (dy > 80) closeSynthesisPanel();
                 }
                 isSwiping = false;
             }, { passive: true });
@@ -1238,10 +1248,10 @@
             const renderedHTML = document.getElementById('sp-content').innerHTML;
             const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
-            const htmlContent = '<!DOCTYPE html>\n<html>\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n<title>Synthesis Report<\/title>\n<style>\n*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }\nbody {\n    font-family: Georgia, \'Times New Roman\', serif;\n    max-width: 720px;\n    margin: 56px auto;\n    padding: 0 40px;\n    color: #161311;\n    line-height: 1.75;\n    font-size: 15px;\n}\n.doc-title {\n    font-family: system-ui, -apple-system, sans-serif;\n    font-size: 34px;\n    font-weight: 800;\n    letter-spacing: -0.02em;\n    border-bottom: 3px solid #161311;\n    padding-bottom: 16px;\n    margin-bottom: 10px;\n}\n.doc-meta {\n    font-family: system-ui, sans-serif;\n    font-size: 12px;\n    color: #595450;\n    letter-spacing: 0.05em;\n    text-transform: uppercase;\n    margin-bottom: 48px;\n}\nh1 { font-family: system-ui, sans-serif; font-size: 24px; font-weight: 800; margin: 40px 0 12px; line-height: 1.2; color: #161311; }\nh2 { font-family: system-ui, sans-serif; font-size: 18px; font-weight: 700; margin: 32px 0 10px; color: #161311; }\nh3 { font-family: system-ui, sans-serif; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #595450; margin: 24px 0 8px; }\nh4 { font-family: system-ui, sans-serif; font-size: 15px; font-weight: 700; color: #161311; margin: 20px 0 6px; }\np { margin: 12px 0; }\nul, ol { padding-left: 26px; margin: 12px 0; }\nli { margin: 6px 0; }\nol { list-style-type: decimal; }\nul { list-style-type: disc; }\nstrong { font-weight: 700; color: #161311; }\nem { font-style: italic; }\ncode { font-family: \'Courier New\', monospace; font-size: 13px; background: #f0ece7; border-radius: 3px; padding: 2px 6px; }\nblockquote { border-left: 3px solid #D95A40; margin: 16px 0; padding: 8px 20px; color: #595450; font-style: italic; }\nhr { border: none; border-top: 1px solid #d0ccc7; margin: 28px 0; }\ntable { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }\nth { background: #f0ece7; font-family: system-ui, sans-serif; font-weight: 700; text-align: left; padding: 8px 12px; border: 1px solid #d0ccc7; }\ntd { padding: 7px 12px; border: 1px solid #d0ccc7; vertical-align: top; }\ntr:nth-child(even) td { background: #f8f6f3; }\n@media print {\n    body { margin: 0; padding: 32px 48px; }\n    @page { margin: 0.75in; size: letter; }\n    h1, h2, h3, h4 { page-break-after: avoid; }\n    table, blockquote, pre { page-break-inside: avoid; }\n    ul, ol { page-break-inside: avoid; }\n    .doc-title, .doc-meta { page-break-after: avoid; }\n}\n<\/style>\n<\/head>\n<body>\n<div class="doc-title">Synthesis Report<\/div>\n<div class="doc-meta">MindCan \u00a0\u00b7\u00a0 ' + dateStr + '<\/div>\n' + renderedHTML + '\n<script>\nwindow.addEventListener(\'load\', function() {\n    setTimeout(function() { window.print(); }, 500);\n});\n<\/script>\n<\/body>\n<\/html>';
+            const htmlContent = '<!DOCTYPE html>\n<html>\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n<title>Synthesis Report<\/title>\n<style>\n*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }\nbody {\n    font-family: Georgia, \'Times New Roman\', serif;\n    max-width: 720px;\n    margin: 56px auto;\n    padding: 0 40px;\n    color: #161311;\n    line-height: 1.75;\n    font-size: 15px;\n}\n.doc-title {\n    font-family: system-ui, -apple-system, sans-serif;\n    font-size: 34px;\n    font-weight: 800;\n    letter-spacing: -0.02em;\n    border-bottom: 3px solid #161311;\n    padding-bottom: 16px;\n    margin-bottom: 10px;\n}\n.doc-meta {\n    font-family: system-ui, sans-serif;\n    font-size: 12px;\n    color: #595450;\n    letter-spacing: 0.05em;\n    text-transform: uppercase;\n    margin-bottom: 48px;\n}\nh1 { font-family: system-ui, sans-serif; font-size: 24px; font-weight: 800; margin: 40px 0 12px; line-height: 1.2; color: #161311; page-break-after: avoid; }\nh2 { font-family: system-ui, sans-serif; font-size: 18px; font-weight: 700; margin: 32px 0 10px; color: #161311; page-break-after: avoid; }\nh3 { font-family: system-ui, sans-serif; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #595450; margin: 24px 0 8px; page-break-after: avoid; }\nh4 { font-family: system-ui, sans-serif; font-size: 15px; font-weight: 700; color: #161311; margin: 20px 0 6px; page-break-after: avoid; }\np { margin: 12px 0; orphans: 3; widows: 3; }\nul, ol { padding-left: 26px; margin: 12px 0; }\nli { margin: 6px 0; }\nol { list-style-type: decimal; }\nul { list-style-type: disc; }\nstrong { font-weight: 700; color: #161311; }\nem { font-style: italic; }\ndel { text-decoration: line-through; opacity: 0.65; }\nu { text-decoration: underline; }\ncode { font-family: \'Courier New\', monospace; font-size: 13px; background: #f0ece7; border-radius: 3px; padding: 2px 6px; }\nblockquote { border-left: 3px solid #D95A40; margin: 16px 0; padding: 8px 20px; color: #595450; font-style: italic; background: #faf8f5; page-break-inside: avoid; }\nhr { border: none; border-top: 1px solid #d0ccc7; margin: 28px 0; }\ntable { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; page-break-inside: avoid; }\nth { background: #f0ece7; font-family: system-ui, sans-serif; font-weight: 700; text-align: left; padding: 8px 12px; border: 1px solid #d0ccc7; }\ntd { padding: 7px 12px; border: 1px solid #d0ccc7; vertical-align: top; }\ntr:nth-child(even) td { background: #f8f6f3; }\n@media print {\n    body { margin: 0; padding: 32px 48px; }\n    @page { margin: 0.75in; size: letter; }\n    h1, h2, h3, h4 { page-break-after: avoid; }\n    table, blockquote, pre { page-break-inside: avoid; }\n    ul, ol { page-break-inside: avoid; }\n    .doc-title, .doc-meta { page-break-after: avoid; }\n}\n<\/style>\n<\/head>\n<body>\n<div class="doc-title">Synthesis Report<\/div>\n<div class="doc-meta">MindCan \u00a0\u00b7\u00a0 ' + dateStr + '<\/div>\n' + renderedHTML + '\n<script>\nwindow.addEventListener(\'load\', function() {\n    setTimeout(function() { window.print(); }, 500);\n});\n<\/script>\n<\/body>\n<\/html>';
 
-            // Mobile: window.open('','_blank') + doc.write is blocked on iOS/Android.
-            // Use blob URL opened via anchor click — survives popup blockers on mobile.
+            // Mobile: window.open + doc.write is blocked by iOS/Android browsers.
+            // Blob URL via anchor click survives popup blockers on all platforms.
             const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) ||
                              (navigator.maxTouchPoints > 1 && window.innerWidth < 1024);
 
@@ -1315,11 +1325,11 @@
 
         /* ---- LEGEND MODAL ---- */
         function openLegendModal() {
-            document.getElementById('leg-obsidian').value  = LEGEND.obsidian;
-            document.getElementById('leg-void').value      = LEGEND.void;
+            document.getElementById('leg-obsidian').value   = LEGEND.obsidian;
+            document.getElementById('leg-void').value       = LEGEND.void;
             document.getElementById('leg-terracotta').value = LEGEND.terracotta;
-            document.getElementById('leg-aubergine').value = LEGEND.aubergine;
-            document.getElementById('leg-gold').value      = LEGEND.gold;
+            document.getElementById('leg-aubergine').value  = LEGEND.aubergine;
+            document.getElementById('leg-gold').value       = LEGEND.gold;
             document.getElementById('legend-modal').classList.add('is-active');
         }
 
@@ -1344,7 +1354,6 @@
         function generateTXT() {
             let txt = "SPATIAL CANVAS EXPORT\n======================\n\n";
 
-            // Legend block — only include rows with user-defined labels
             const colorNames = { obsidian: 'Obsidian', void: 'Void', terracotta: 'Terracotta', aubergine: 'Aubergine', gold: 'Gold' };
             const legendLines = Object.entries(colorNames)
                 .filter(([key]) => LEGEND[key] && LEGEND[key].trim())
@@ -1512,7 +1521,6 @@ Sequentially map the flow from root concepts through their connections. Synthesi
                 updateCamera();
             }
 
-            // Auto-vertical dock on narrow viewports
             const dock = document.getElementById('ui-dock');
             let autoVertical = false;
 
@@ -1931,7 +1939,7 @@ Sequentially map the flow from root concepts through their connections. Synthesi
                 dock.style.top = `${rect.top}px`;
                 dockStart = { x: e.clientX, y: e.clientY, left: rect.left, top: rect.top };
                 dock.classList.add('is-dragging');
-                dock.classList.add('is-dragged'); // marks as manually positioned
+                dock.classList.add('is-dragged');
                 dockHandle.setPointerCapture(e.pointerId);
             });
 
@@ -1982,7 +1990,6 @@ Sequentially map the flow from root concepts through their connections. Synthesi
                         throw new Error("Missing Key");
                     }
 
-                    // Capture IDs before async gap
                     const capturedIds = Array.from(STATE.cards.keys());
 
                     const response = await fetch('https://api.deepseek.com/chat/completions', {
@@ -2007,8 +2014,6 @@ Sequentially map the flow from root concepts through their connections. Synthesi
                     if (data.error) throw new Error(data.error.message || "API Error");
 
                     const summary = data.choices?.[0]?.message?.content || "Synthesis requires another attempt.";
-
-                    // Show panel with rendered output — user decides what to do with it
                     showSynthesisPanel(summary, capturedIds);
                     showToast("Synthesis Complete");
 
@@ -2045,7 +2050,6 @@ Sequentially map the flow from root concepts through their connections. Synthesi
                 showToast("Legend Saved");
             });
 
-            // Close legend modal on backdrop tap
             document.getElementById('legend-modal').addEventListener('pointerdown', e => {
                 if (e.target === document.getElementById('legend-modal')) closeLegendModal();
             });
@@ -2061,7 +2065,6 @@ Sequentially map the flow from root concepts through their connections. Synthesi
                     n.el.classList.remove('theme-obsidian', 'theme-void', 'theme-terracotta', 'theme-aubergine', 'theme-gold');
                     n.el.classList.add(swatch.dataset.theme);
                     updateAllConnections();
-                    // Keep controls visible after pick
                     n.el.classList.add('color-flash');
                     clearTimeout(n._colorFlashTimer);
                     n._colorFlashTimer = setTimeout(() => n.el.classList.remove('color-flash'), 1500);
@@ -2089,7 +2092,7 @@ Sequentially map the flow from root concepts through their connections. Synthesi
                 enterEditMode(n.id);
             });
 
-            // Clicking in card padding while editing focuses the text area
+            // Clicking card padding while editing redirects focus to the contenteditable
             n.el.addEventListener('pointerdown', e => {
                 if (STATE.editingCardId !== n.id) return;
                 const hit = e.composedPath().find(el => el instanceof Element && el.classList && el.classList.contains('card-content'));
@@ -2285,7 +2288,15 @@ Sequentially map the flow from root concepts through their connections. Synthesi
                     const cardEl = element.closest('.card');
                     const n = Array.from(STATE.cards.values()).find(nd => nd.el === cardEl);
                     let html = element.innerHTML;
-                    if (/\*\*(.+?)\*\*/.test(html) || /\*(.+?)\*/.test(html)) {
+
+                    // Lookbehind/lookahead ensures single-* never fires in the middle of **bold** typing
+                    const MD_SINGLE = /(?<!\*)\*(?!\*)([^*]+?)(?<!\*)\*(?!\*)/;
+                    if (
+                        /\*\*(.+?)\*\*/.test(html) ||
+                        MD_SINGLE.test(html) ||
+                        /~~.+?~~/.test(html) ||
+                        /__[^_]+?__/.test(html)
+                    ) {
                         const sel = window.getSelection();
                         let caretOffset = 0;
                         if (sel.rangeCount > 0) {
@@ -2295,20 +2306,26 @@ Sequentially map the flow from root concepts through their connections. Synthesi
                             preCaretRange.setEnd(range.endContainer, range.endOffset);
                             caretOffset = preCaretRange.toString().length;
                         }
-                        let originalTextLength = element.textContent.length;
+                        const originalTextLength = element.textContent.length;
+
                         html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-                        html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+                        html = html.replace(/(?<!\*)\*(?!\*)([^*]+?)(?<!\*)\*(?!\*)/g, '<em>$1</em>');
+                        html = html.replace(/~~(.+?)~~/g, '<del>$1</del>');
+                        html = html.replace(/__([^_]+?)__/g, '<u>$1</u>');
+
                         if (element.innerHTML !== html) {
                             element.innerHTML = html;
-                            let newTextLength = element.textContent.length;
-                            let diff = originalTextLength - newTextLength;
-                            caretOffset -= diff;
+
+                            const newTextLength = element.textContent.length;
+                            caretOffset -= (originalTextLength - newTextLength);
                             if (caretOffset < 0) caretOffset = 0;
+
                             let charIndex = 0;
-                            let range = document.createRange();
+                            const range = document.createRange();
                             range.setStart(element, 0);
                             range.collapse(true);
-                            let nodeStack = [element], node, foundStart = false;
+                            const nodeStack = [element];
+                            let node, foundStart = false;
                             while (!foundStart && (node = nodeStack.pop())) {
                                 if (node.nodeType === 3) {
                                     const nextCharIndex = charIndex + node.length;
