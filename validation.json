@@ -1,0 +1,29 @@
+{
+  "source_file": "/mnt/data/Pasted text.txt",
+  "source_sha256": "1d490ac0805c5a4730f07ffa67ea1e3f931ea6399b8e0a00df0b92a7f4062de1",
+  "packaged_app_sha256": "1d490ac0805c5a4730f07ffa67ea1e3f931ea6399b8e0a00df0b92a7f4062de1",
+  "app_html_unmodified": true,
+  "stripe_link": "https://donate.stripe.com/28E28r1JN7cm5VW0Ag0oM04",
+  "node_site_js_check": true,
+  "contrast_ratios": {
+    "ink on paper": 16.58,
+    "muted on paper": 7.19,
+    "white on ember-dark": 11.51,
+    "white on ink": 18.2,
+    "ember-dark on paper": 10.49,
+    "white on stripe-purple-ish": 12.8,
+    "white on moss": 10.2
+  },
+  "wrapper_banned_token_scan": {
+    "Inter": [],
+    "Roboto": [],
+    "tailwind": [],
+    "Tailwind": [],
+    "sans-serif": [],
+    "system-ui": []
+  },
+  "locked_app_original_generic_fallback_tokens": {
+    "sans-serif": true,
+    "system-ui": true
+  }
+}

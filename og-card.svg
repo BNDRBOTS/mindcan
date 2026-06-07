@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f7efe2"/>
+      <stop offset="0.55" stop-color="#e9d9c2"/>
+      <stop offset="1" stop-color="#304335"/>
+    </linearGradient>
+    <pattern id="p" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M0 0H32M0 0V32" stroke="#170f0b" stroke-opacity=".12"/>
+    </pattern>
+  </defs>
+  <rect width="1200" height="630" fill="url(#g)"/>
+  <rect width="1200" height="630" fill="url(#p)"/>
+  <circle cx="1020" cy="120" r="210" fill="#a9321d" opacity=".24"/>
+  <circle cx="190" cy="510" r="260" fill="#170f0b" opacity=".12"/>
+  <path d="M124 374C190 156 412 100 562 220C667 304 603 492 430 552C266 609 72 528 124 374Z" fill="none" stroke="#170f0b" stroke-width="24" stroke-linecap="round"/>
+  <path d="M740 180h270a42 42 0 0142 42v190a42 42 0 01-42 42H740a42 42 0 01-42-42V222a42 42 0 0142-42Z" fill="#170f0b"/>
+  <text x="760" y="278" fill="#fffaf1" font-family="Bricolage Grotesque" font-size="58" font-weight="800">Spatial</text>
+  <text x="760" y="340" fill="#fffaf1" font-family="Bricolage Grotesque" font-size="58" font-weight="800">Canvas Pro</text>
+  <text x="760" y="398" fill="#e9d9c2" font-family="IBM Plex Sans Condensed" font-size="34" font-weight="700">Stripe-first BNDR wrapper</text>
+</svg>
