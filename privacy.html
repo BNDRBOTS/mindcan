@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Privacy Policy — MindCan™</title>
+    <meta name="description" content="MindCan™ privacy policy: local-first by design, no accounts, no tracking, no analytics.">
+    <meta name="theme-color" content="#EFECE7">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 64 64%27%3E%3Crect width=%2764%27 height=%2764%27 rx=%2714%27 fill=%27%23161311%27/%3E%3Cpath d=%27M25 27 L39 37%27 stroke=%27%23D49A36%27 stroke-width=%274%27 stroke-linecap=%27round%27/%3E%3Ccircle cx=%2722%27 cy=%2724%27 r=%277%27 fill=%27%23D95A40%27/%3E%3Ccircle cx=%2742%27 cy=%2740%27 r=%277%27 fill=%27%23EFECE7%27/%3E%3C/svg%3E">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <script src="config.js"></script>
+    <script src="consent.js" defer></script>
+    <script src="reporter.js" defer></script>
+    <style>
+        :root { --bone:#EFECE7; --obsidian:#161311; --terracotta:#D95A40; --void:#595450; --line:rgba(22,19,17,0.10); }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Figtree',system-ui,sans-serif; background:var(--bone); color:var(--obsidian); line-height:1.7; -webkit-font-smoothing:antialiased; }
+        .page { width:min(720px, 100% - 40px); margin-inline:auto; padding:32px 0 80px; }
+        .back { display:inline-flex; align-items:center; gap:8px; min-height:44px; text-decoration:none; font-weight:700; font-size:14px; color:var(--void); }
+        .back:hover { color:var(--terracotta); }
+        h1 { font-size:clamp(30px,7vw,42px); font-weight:900; letter-spacing:-0.03em; line-height:1.1; margin:18px 0 6px; }
+        .updated { font-size:13px; color:var(--void); margin-bottom:34px; }
+        h2 { font-size:19px; font-weight:800; letter-spacing:-0.01em; margin:34px 0 10px; }
+        p, li { font-size:15px; color:#33302d; }
+        ul { padding-left:22px; margin:10px 0; }
+        li { margin-bottom:6px; }
+        .card { background:#fff; border:1px solid var(--line); border-radius:14px; padding:18px 20px; margin:16px 0; }
+        .card strong { color:var(--terracotta); }
+        a { color:var(--terracotta); font-weight:600; }
+        footer { margin-top:56px; padding-top:20px; border-top:1px solid var(--line); font-size:13px; color:var(--void); display:flex; flex-wrap:wrap; gap:8px 20px; }
+        footer a { color:var(--void); text-decoration:none; font-weight:600; padding:6px 0; }
+        footer a:hover { color:var(--terracotta); }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <a class="back" href="index.html">← Back to MindCan™</a>
+        <h1>Privacy Policy</h1>
+        <p class="updated">Last updated: July 12, 2026</p>
+
+        <div class="card"><p><strong>The short version:</strong> MindCan™ runs entirely in your browser. We operate no servers for the app, require no account, and use no cookies, analytics, or tracking of any kind. We cannot see your canvases, your API keys, or anything else you create — by design.</p></div>
+
+        <h2>1. What we collect</h2>
+        <p>Nothing. MindCan is a static, local-first application. There is no sign-up, no telemetry, no analytics script, and no server owned by BNDR LLC that receives your data when you use the app.</p>
+
+        <h2>2. What stays on your device</h2>
+        <p>With your consent (via the storage notice shown on first visit), MindCan stores the following in your browser's local storage, on your device only:</p>
+        <ul>
+            <li>Your canvas contents (cards, positions, connections) and color legend</li>
+            <li>Preferences: theme, font size, and canvas mode</li>
+            <li>Your DeepSeek API key, if you add one in Settings</li>
+            <li>Your license key and Pro status, if you activate a license</li>
+        </ul>
+        <p>If you decline storage, MindCan still works — your work simply lives in memory for the current session and is not persisted. You can clear all stored data at any time via your browser's site-data settings, or with the app's Reset action.</p>
+
+        <h2>3. Third-party services (only when you use them)</h2>
+        <p>MindCan contacts external services only in these specific, user-initiated cases:</p>
+        <ul>
+            <li><strong>AI Synthesis (optional):</strong> when you run Synthesis, your board's compiled text is sent directly from your browser to DeepSeek (api.deepseek.com) using <em>your own</em> API key. BNDR LLC never receives, proxies, or logs this traffic. DeepSeek's own privacy policy applies to that request.</li>
+            <li><strong>License activation (optional):</strong> when you activate a Gumroad license key, your browser contacts Gumroad's license verification API directly to validate the key. Gumroad's privacy policy applies.</li>
+            <li><strong>Purchases (optional):</strong> payments are processed entirely by Stripe or Gumroad on their own pages. We never see your payment details.</li>
+            <li><strong>Fonts:</strong> the Figtree typeface is loaded from Google Fonts, which involves a standard request to Google's font servers.</li>
+            <li><strong>Error reports (optional):</strong> if the app hits an unexpected error, you can click “Report this issue.” Only then is a redacted technical report (error message and browser/version details — never your canvas content, API key, or license key) sent to a BNDR Labs endpoint so we can fix the problem. Dismissing the prompt sends nothing.</li>
+        </ul>
+
+        <h2>4. Cookies</h2>
+        <p>MindCan sets no cookies. The storage notice you see on first visit governs browser local storage (used solely for the features listed above), not cookies, and no data from it is transmitted anywhere.</p>
+
+        <h2>5. Your rights & control</h2>
+        <ul>
+            <li>Export your data anytime (JSON, TXT, PDF) — it's yours.</li>
+            <li>Delete everything instantly by clearing site data in your browser.</li>
+            <li>Revoke AI access by clearing your API key in ⚙ Settings.</li>
+        </ul>
+        <p>Because we hold no data about you, there is nothing for us to disclose, sell, or breach.</p>
+
+        <h2>6. Children</h2>
+        <p>MindCan is a general-audience productivity tool and does not knowingly collect information from anyone, including children — it collects no information at all.</p>
+
+        <h2>7. Changes to this policy</h2>
+        <p>If this policy changes, the date above will be updated. Material changes will be noted on this page.</p>
+
+        <h2>8. Contact</h2>
+        <p>Questions? Contact BNDR LLC at the support email listed on the <a href="index.html">homepage</a> footer.</p>
+
+        <footer>
+            <span>© <span id="year"></span> BNDR LLC · MindCan™</span>
+            <a href="index.html">Home</a>
+            <a href="terms.html">Terms</a>
+            <a href="app.html">Open App</a>
+        </footer>
+    </div>
+    <script>document.getElementById('year').textContent = new Date().getFullYear();</script>
+</body>
+</html>
